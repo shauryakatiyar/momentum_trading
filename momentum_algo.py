@@ -117,7 +117,6 @@ def main(nasdaq, nse, sandp, allstock, nasdaqkey, nsekey, downloaddata):
     unique_date_time_for_file_name = str(datetime.now().strftime("%d%m%Y"))
     # File name for storing and readind Data
     filename = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "cumulative_data-" + unique_date_time_for_file_name + ".txt"
-    print(filename)
     if downloaddata:
         # Will store all returned data in data2 variable
         data2 = {}
