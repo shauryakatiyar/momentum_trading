@@ -1,11 +1,8 @@
 #!/usr/bin/env python3.9
 '''
-gatherTlTickets.py
-This monitoring script does daily backup of Tl Tickets.
-optional arguments:
-  -h, --help            show this help message and exit
-  -l LOGLEVEL, --logLevel LOGLEVEL
-                        Logging Level
+momentum_algo.py
+This momentum algo script Prepares Excel data for top performers.
+Download CSV of stocks from https://www.nasdaq.com/market-activity/stocks/screener
 '''
 import ast
 from datetime import datetime
@@ -84,10 +81,8 @@ def portfolio_input():
 #------------------------------------------------
 # MAIN
 #------------------------------------------------
-def main(nasdaq, nse, sandp, allstock, nasdaqkey, nsekey, downloaddata):
+def main(nasdaq, nse, sandp, allstock, nasdaqkey, nsekey, downloaddata, olderdate, sandpkey, downloadnasdaq, downloadnse, downloadsandp, downloadall, downloadlargemega, largemegakey, largemega):
 
-    # nasdaq=sk_24c9ec8bbd8048edbf2982a2dae55876
-    # nse=sk_24c9ec8bbd8048edbf2982a2dae55876
     #############NASDAQ##############
     stocks_nasdaq = pd.read_csv("NASDAQ.csv")
     IEX_CLOUD_API_TOKEN_NASDAQ = nasdaqkey
@@ -112,12 +107,37 @@ def main(nasdaq, nse, sandp, allstock, nasdaqkey, nsekey, downloaddata):
 
     #############S&P500##############
     stocks_sandp500 = pd.read_csv("sp_500_stocks.csv")
+    IEX_CLOUD_API_TOKEN_sandp500 = sandpkey
+
+    # Dividing Stocks into Chunks of 100
+    symbol_groups_sandp500 = list(chunks(stocks_sandp500['Ticker'], 100))
+    symbol_strings_sandp500 = []
+    for i in range(0, len(symbol_groups_sandp500)):
+        symbol_strings_sandp500.append(','.join(symbol_groups_sandp500[i]))
     #############S&P500################
 
-    unique_date_time_for_file_name = str(datetime.now().strftime("%d%m%Y"))
+    #############LargeMega##############
+    stocks_largemega = pd.read_csv("large_mega.csv")
+    IEX_CLOUD_API_TOKEN_largemega = largemegakey
+
+    # Dividing Stocks into Chunks of 100
+    symbol_groups_largemega = list(chunks(stocks_largemega['Ticker'], 100))
+    symbol_strings_largemega = []
+    for i in range(0, len(symbol_groups_largemega)):
+        symbol_strings_largemega.append(','.join(symbol_groups_largemega[i]))
+    #############LargeMega################
+
+    if not olderdate:
+        unique_date_time_for_file_name = str(datetime.now().strftime("%d%m%Y"))
+    else:
+        unique_date_time_for_file_name = olderdate
     # File name for storing and readind Data
-    filename = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "cumulative_data-" + unique_date_time_for_file_name + ".txt"
-    if downloaddata:
+    filename_nasdaq   = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "cumulative_data-nasdaq-" + unique_date_time_for_file_name + ".txt"
+    filename_nse      = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "cumulative_data-nse-" + unique_date_time_for_file_name + ".txt"
+    filename_sandp500 = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "cumulative_data-sandp-" + unique_date_time_for_file_name + ".txt"
+    filename_largemega = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "cumulative_data-largemega-" + unique_date_time_for_file_name + ".txt"
+    filename_all      = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "cumulative_data-" + unique_date_time_for_file_name + ".txt"
+    if downloaddata and downloadall:
         # Will store all returned data in data2 variable
         data2 = {}
         data = ""
@@ -147,33 +167,161 @@ def main(nasdaq, nse, sandp, allstock, nasdaqkey, nsekey, downloaddata):
             data = requests.get(batch_api_call_url).json()
             data2.update(data)
 
-        if not os.path.exists(os.path.dirname(filename)):
+        if not os.path.exists(os.path.dirname(filename_all)):
             try:
-                print("Creating %s" % filename)
-                os.makedirs(os.path.dirname(filename))
+                print("Creating %s" % filename_all)
+                os.makedirs(os.path.dirname(filename_all))
             except OSError as exc:  # Guard against race condition
                 if exc.errno != errno.EEXIST:
                     raise
 
-        with open(filename, 'w') as file:
+        with open(filename_all, 'w') as file:
             file.write(repr(data2))  # use `json.loads` to do the reverse
-        print("Written output to %s" % filename)
+        print("Written output to %s" % filename_all)
+        abort()
+    elif downloaddata and downloadnasdaq:
+        # Will store all returned data in data2 variable
+        data2 = {}
+        data = ""
+        # Going through NASDAQ List
+        print("Going for NASDAQ list")
+        print("Total entries in NASDAQ list %s" % (len(stocks_nasdaq.index)))
+        c = 0
+        for symbol_string_nasdaq in symbol_strings_nasdaq:
+            time.sleep(2.4)
+            print(c)
+            c = c + 1
+            batch_api_call_url = f'https://cloud.iexapis.com/stable/stock/market/batch/?types=stats,quote&symbols={symbol_string_nasdaq}&token={IEX_CLOUD_API_TOKEN_NASDAQ}'
+            data = requests.get(batch_api_call_url).json()
+            data2.update(data)
+
+        if not os.path.exists(os.path.dirname(filename_nasdaq)):
+            try:
+                print("Creating %s" % filename_nasdaq)
+                os.makedirs(os.path.dirname(filename_nasdaq))
+            except OSError as exc:  # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+
+        with open(filename_nasdaq, 'w') as file:
+            file.write(repr(data2))  # use `json.loads` to do the reverse
+        print("Written output to %s" % filename_nasdaq)
+        abort()
+    elif downloaddata and downloadnse:
+        # Will store all returned data in data2 variable
+        data2 = {}
+        data = ""
+        # Going through NSE List
+        print("Going for NSE list")
+        print("Total entries in NSE list %s" % (len(stocks_nse.index)))
+        c = 0
+        data = ""
+        for symbol_string_nse in symbol_strings_nse:
+            time.sleep(2.4)
+            print(c)
+            c = c + 1
+            batch_api_call_url = f'https://cloud.iexapis.com/stable/stock/market/batch/?types=stats,quote&symbols={symbol_string_nse}&token={IEX_CLOUD_API_TOKEN_NSE}'
+            data = requests.get(batch_api_call_url).json()
+            data2.update(data)
+
+        if not os.path.exists(os.path.dirname(filename_nse)):
+            try:
+                print("Creating %s" % filename_nse)
+                os.makedirs(os.path.dirname(filename_nse))
+            except OSError as exc:  # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+
+        with open(filename_nse, 'w') as file:
+            file.write(repr(data2))  # use `json.loads` to do the reverse
+        print("Written output to %s" % filename_nse)
+        abort()
+    elif downloaddata and downloadsandp:
+        # Will store all returned data in data2 variable
+        data2 = {}
+        data = ""
+        # Going through SANDP List
+        print("Going for SANDP list")
+        print("Total entries in SANDP list %s" % (len(stocks_sandp500.index)))
+        c = 0
+        data = ""
+        for symbol_string_sandp500 in symbol_strings_sandp500:
+            time.sleep(2.4)
+            print(c)
+            c = c + 1
+            batch_api_call_url = f'https://cloud.iexapis.com/stable/stock/market/batch/?types=stats,quote&symbols={symbol_string_sandp500}&token={IEX_CLOUD_API_TOKEN_sandp500}'
+            data = requests.get(batch_api_call_url).json()
+            data2.update(data)
+
+        if not os.path.exists(os.path.dirname(filename_sandp500)):
+            try:
+                print("Creating %s" % filename_sandp500)
+                os.makedirs(os.path.dirname(filename_sandp500))
+            except OSError as exc:  # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+
+        with open(filename_sandp500, 'w') as file:
+            file.write(repr(data2))  # use `json.loads` to do the reverse
+        print("Written output to %s" % filename_sandp500)
+        abort()
+    elif downloaddata and downloadlargemega:
+        # Will store all returned data in data2 variable
+        data2 = {}
+        data = ""
+        # Going through SANDP List
+        print("Going for Large Mega list")
+        print("Total entries in Large Mega list %s" % (len(stocks_largemega.index)))
+        c = 0
+        data = ""
+        for symbol_string_largemega in symbol_strings_largemega:
+            time.sleep(2.4)
+            print(c)
+            c = c + 1
+            batch_api_call_url = f'https://cloud.iexapis.com/stable/stock/market/batch/?types=stats,quote&symbols={symbol_string_largemega}&token={IEX_CLOUD_API_TOKEN_largemega}'
+            data = requests.get(batch_api_call_url).json()
+            data2.update(data)
+
+        if not os.path.exists(os.path.dirname(filename_largemega)):
+            try:
+                print("Creating %s" % filename_largemega)
+                os.makedirs(os.path.dirname(filename_largemega))
+            except OSError as exc:  # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+
+        with open(filename_largemega, 'w') as file:
+            file.write(repr(data2))  # use `json.loads` to do the reverse
+        print("Written output to %s" % filename_largemega)
         abort()
 
     cumulative_list = []
 
     if nasdaq:
         cumulative_list = stocks_nasdaq['Ticker'].tolist()
+        file = open(filename_nasdaq, "r")
+        contents = file.read()
+        data1 = ast.literal_eval(contents)
     elif nse:
         cumulative_list = stocks_nse['Ticker'].tolist()
+        file = open(filename_nse, "r")
+        contents = file.read()
+        data1 = ast.literal_eval(contents)
     elif sandp:
         cumulative_list = stocks_sandp500['Ticker'].tolist()
+        file = open(filename_sandp500, "r")
+        contents = file.read()
+        data1 = ast.literal_eval(contents)
+    elif largemega:
+        cumulative_list = stocks_largemega['Ticker'].tolist()
+        file = open(filename_largemega, "r")
+        contents = file.read()
+        data1 = ast.literal_eval(contents)
     elif allstock:
         cumulative_list = stocks_nasdaq['Ticker'].tolist() + stocks_nse['Ticker'].tolist() + stocks_sandp500['Ticker'].tolist()
-
-    file = open(filename, "r")
-    contents = file.read()
-    data1 = ast.literal_eval(contents)
+        file = open(filename_all, "r")
+        contents = file.read()
+        data1 = ast.literal_eval(contents)
 
     # Creating Data Frame
     my_columns = ['Ticker', 'Price', 'One-Year Price Return', 'Number of Shares to Buy']
@@ -244,9 +392,6 @@ def main(nasdaq, nse, sandp, allstock, nasdaqkey, nsekey, downloaddata):
     hqm_dataframe = pd.DataFrame(columns=hqm_columns)
 
     for symbol_string in combined_symbol_strings:
-        #     print(symbol_strings)
-        # batch_api_call_url = f'https://sandbox.iexapis.com/stable/stock/market/batch/?types=stats,quote&symbols={symbol_string}&token={IEX_CLOUD_API_TOKEN}'
-        # data = requests.get(batch_api_call_url).json()
         for symbol in symbol_string.split(','):
             if symbol in data1 and 'quote' in data1[symbol] and (data1[symbol]['quote'] and data1[symbol]['stats']) and symbol in cumulative_list:
                 hqm_dataframe = hqm_dataframe.append(
@@ -329,6 +474,8 @@ def main(nasdaq, nse, sandp, allstock, nasdaqkey, nsekey, downloaddata):
         filename2 = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "sandp-" + unique_date_time_for_file_name + ".xlsx"
     if nasdaq:
         filename2 = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "nasdaq-" + unique_date_time_for_file_name + ".xlsx"
+    if largemega:
+        filename2 = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "largemega-" + unique_date_time_for_file_name + ".xlsx"
     if allstock:
         filename2 = expanduser(".") + "/" + unique_date_time_for_file_name + "/" + "allstock-" + unique_date_time_for_file_name + ".xlsx"
 
@@ -412,13 +559,22 @@ if __name__ == '__main__':
     # Parsing Options
     parser = argparse.ArgumentParser(description=textwrap.dedent(__doc__), formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-l', '--logLevel', default=logOptions['logLevel'], help='Logging Level')
-    parser.add_argument('--nasdaq', action='store_true', help='IP Address')
-    parser.add_argument('--nse', action='store_true', help='MAC address')
-    parser.add_argument('--sandp', action='store_true', help='Domain name for A record')
-    parser.add_argument('--allstock', action='store_true', help='Domain name for A record')
-    parser.add_argument('--downloaddata', action='store_true', help='Read data from sheet')
+    parser.add_argument('--nasdaq', action='store_true', help='Prepare Refined List considering nasdaq Stocks')
+    parser.add_argument('--nse', action='store_true', help='Prepare Refined List considering nse Stocks')
+    parser.add_argument('--sandp', action='store_true', help='Prepare Refined List considering sandp Stocks')
+    parser.add_argument('--largemega', action='store_true', help='Prepare Refined List considering Large and Mega Cap Stock')
+    parser.add_argument('--allstock', action='store_true', help='Prepare Refined List considering All Stocks')
+    parser.add_argument('--downloaddata', action='store_true', help='Download Data')
+    parser.add_argument('--downloadnasdaq', action='store_true', help='Download nasdaq')
     parser.add_argument('--nasdaqkey', help='Key for downloading nasdaq data')
+    parser.add_argument('--downloadnse', action='store_true', help='Download nse')
     parser.add_argument('--nsekey', help='Key for downloading nse data')
+    parser.add_argument('--downloadsandp', action='store_true', help='Download sandp')
+    parser.add_argument('--sandpkey', help='Key for downloading sandp data')
+    parser.add_argument('--downloadlargemega', action='store_true', help='Download Large and Mega Cap')
+    parser.add_argument('--largemegakey', help='Key for downloading sandp data')
+    parser.add_argument('--downloadall', action='store_true', help='Download All, Nasdaq and Nse Key Required')
+    parser.add_argument('--olderdate', help='If you want older date, ddmmyyyy format')
     options = parser.parse_args()
 
     # Generic Keyboard Interrupt Signal Handler
@@ -427,12 +583,28 @@ if __name__ == '__main__':
     # Logging
     logOptions['logLevel'] = options.logLevel
 
-    if options.downloaddata and not (options.nasdaqkey and options.nsekey):
+    if options.downloaddata and options.downloadnasdaq and not options.nasdaqkey:
+        print("Please enter NASDAQ Keys")
+        abort()
+
+    if options.downloaddata and options.downloadnse and not options.nsekey:
+        print("Please enter NSE Keys")
+        abort()
+
+    if options.downloaddata and options.downloadsandp and not options.sandpkey:
+        print("Please enter SANDP Keys")
+        abort()
+
+    if options.downloaddata and options.downloadlargemega and not options.largemegakey:
+        print("Please enter LargeMega Keys")
+        abort()
+
+    if options.downloaddata and options.downloadall and not (options.nasdaqkey and options.nsekey):
         print("Please enter both NSE and NASDAQ Keys")
         abort()
 
     # Main
-    main(options.nasdaq, options.nse, options.sandp, options.allstock, options.nasdaqkey, options.nsekey, options.downloaddata)
+    main(options.nasdaq, options.nse, options.sandp, options.allstock, options.nasdaqkey, options.nsekey, options.downloaddata, options.olderdate, options.sandpkey, options.downloadnasdaq, options.downloadnse, options.downloadsandp, options.downloadall, options.downloadlargemega, options.largemegakey, options.largemega)
 
     # Exit
     abort()
